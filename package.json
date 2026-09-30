@@ -1,0 +1,39 @@
+{
+  "name": "react-vite-tailwind",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "sync:mobile": "node mobile/scripts/sync-html.js",
+    "build:mobile": "vite build && node mobile/scripts/sync-html.js && echo '✓ Web built + mobile synced. Run: cd mobile && npx expo start'",
+    "dev:mobile": "node mobile/scripts/dev-mobile.js",
+    "dev:mobile:live": "node mobile/scripts/dev-mobile.js --live",
+    "dev:mobile:legacy": "vite build --watch & cd mobile && npx expo start",
+    "expo": "cd mobile && npx expo start",
+    "expo:web": "cd mobile && npx expo start --web",
+    "expo:android": "cd mobile && npx expo start --android",
+    "expo:ios": "cd mobile && npx expo start --ios"
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "framer-motion": "^13.4.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "tailwind-merge": "3.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.17",
+    "@types/node": "22.19.17",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.1",
+    "chokidar": "^5.0.0",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.9.3",
+    "vite": "7.3.2",
+    "vite-plugin-singlefile": "2.3.0"
+  }
+}
