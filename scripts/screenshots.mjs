@@ -180,14 +180,14 @@ async function capture(page, shot) {
       timeout: 20000,
       polling: 100,
     });
-  } catch {
+  } catch (err) {
     const diag = await page.evaluate(() => ({
       neon: typeof window.__NEON__,
       ready: document.readyState,
       canvases: document.querySelectorAll('canvas').length,
       text: document.body.innerText.replace(/\s+/g, ' ').slice(0, 120),
     }));
-    throw new Error(`${shot.name}: app never mounted. ${JSON.stringify(diag)}`);
+    throw new Error(`${shot.name}: app never mounted. ${JSON.stringify(diag)}\n    waitForFunction: ${err.message.split('\n')[0]}`);
   }
   await sleep(250);
 
