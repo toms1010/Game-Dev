@@ -28,10 +28,10 @@ import {
   clamp, detectQuality, emptyInput, rand, resolveFx, sweepBy, sweepByPooled, sweepPooled,
   WAVES_PER_LEVEL,
   type Bullet, type Enemy, type FxProfile, type Ghost, type Input, type Particle,
-  type Pickup, type PickupKind, type Pop, type Quality, type Shockwave, type Vec,
+  type Pickup, type PickupKind, type Pop, type Quality, type RemotePlayer, type Shockwave, type Vec,
   type WeaponType, type WeaponUpgrade,
 } from './entities';
-import { SpatialHash, segmentIntersectsCircle, nearestEnemy } from './physics';
+import { SpatialHash, segmentIntersectsCircle, nearestEnemy, integrateMovement } from './physics';
 import {
   isBossWave, maxConcurrentEnemies, rosterSize, spawnEnemy, spawnEnemyAt,
   spawnInterval, updateEnemies,
@@ -163,6 +163,32 @@ export class Game {
   reticle: Vec | null = null;
   reticleColor = '#7df9ff';
   moveTarget: Vec | null = null;
+
+  /**
+   * Interpolated positions of other players in a networked match.
+   * Written by `src/network/interpolation.ts` between frames; the simulation
+   * itself never touches it.
+   */
+  remotePlayers: RemotePlayer[] = [];
+
+  /**
+   * Visual-only offset applied to the local ship so a reconciliation
+   * correction eases in instead of snapping. Decayed by the host loop.
+   */
+  netError = { x: 0, y: 0 };
+
+  /**
+   * Server-authoritative mode.
+   *
+   * In this mode the local simulation stops owning gameplay: the ship is
+   * moved by client prediction, health and the enemy field arrive in
+   * snapshots, and damage/score are decided by the server. Local bullets are
+   * kept purely for responsive tracer feedback.
+   */
+  netMode = false;
+
+  /** Net-owned enemies, keyed by server id so objects stay stable. */
+  private netEnemies = new Map<number, Enemy>();
 
   /** Broad-phase grid for bullet-vs-enemy tests; rebuilt every tick. */
   spatialGrid: SpatialHash<Enemy>;
@@ -773,6 +799,10 @@ export class Game {
    * how heavy impacts read as weight.
    */
   update(dtRaw: number, input: Input): void {
+    if (this.netMode) {
+      this.updateNet(dtRaw, input);
+      return;
+    }
     const frameDt = Math.min(dtRaw, 0.033);
 
     if (this.hitStopTimer > 0) {
@@ -835,26 +865,10 @@ export class Game {
 
     const m = Math.hypot(mx, my) || 1;
     if (m > 1) { mx /= m; my /= m; }
-    const accel = 3400;
-    p.vx += mx * accel * gameDt;
-    p.vy += my * accel * gameDt;
-    const friction = Math.pow(0.0009, gameDt);
-    p.vx *= friction;
-    p.vy *= friction;
-    const maxSpeed = p.dash > 0 ? 1400 : 420 * this.baseSpeedMult;
-    const sp = Math.hypot(p.vx, p.vy);
-    if (sp > maxSpeed) { p.vx = (p.vx / sp) * maxSpeed; p.vy = (p.vy / sp) * maxSpeed; }
-    p.x += p.vx * gameDt;
-    p.y += p.vy * gameDt;
-
-    // Clamp to the arena and kill the velocity component into the wall, so
-    // the ship slides along it instead of sticking.
-    const nx = clamp(p.x, p.r, this.W - p.r);
-    const ny = clamp(p.y, p.r, this.H - p.r);
-    if (nx !== p.x) p.vx = 0;
-    if (ny !== p.y) p.vy = 0;
-    p.x = nx;
-    p.y = ny;
+    integrateMovement(
+      p, mx, my, gameDt, this.W, this.H,
+      p.dash > 0 ? 1400 : 420 * this.baseSpeedMult,
+    );
 
     p.bob = (p.bob + gameDt * 4) % TAU;
 

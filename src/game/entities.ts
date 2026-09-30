@@ -224,6 +224,25 @@ export interface Shockwave {
 
 export interface Ghost { x: number; y: number; angle: number; life: number; max: number }
 
+/**
+ * Another human player in a networked match, as the renderer sees them.
+ * Owned by the interpolation layer — the simulation never writes to it.
+ */
+export interface RemotePlayer {
+  id: number;
+  name: string;
+  x: number;
+  y: number;
+  r: number;
+  angle: number;
+  hp: number;
+  maxHp: number;
+  /** Index into `REMOTE_COLORS`, assigned by the server. */
+  colorIndex: number;
+}
+
+export const REMOTE_COLORS = ['#f472b6', '#4ade80', '#a78bfa', '#fb923c', '#22d3ee', '#e879f9'] as const;
+
 /** A wave-clear reward the player picks from three random options. */
 export interface WeaponUpgrade {
   id: 'fire_rate' | 'damage' | 'spread_weapon' | 'homing_weapon' | 'bullet_speed' | 'plasma_beam';

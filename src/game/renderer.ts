@@ -11,7 +11,7 @@
  * renderer, so it is the first thing the low tier switches off.
  */
 
-import { TAU, type Enemy } from './entities';
+import { REMOTE_COLORS, TAU, type Enemy } from './entities';
 import type { Game } from './engine';
 
 const PICKUP_COLOR: Record<string, string> = {
@@ -70,7 +70,10 @@ export function renderGame(g: Game, ctx: CanvasRenderingContext2D): void {
   drawEnemies(g, ctx, fx.shadows);
   drawBullets(g, ctx, fx);
 
-  if (!g.over) drawPlayer(g, ctx, fx);
+  if (!g.over) {
+    drawRemotePlayers(g, ctx, fx);
+    drawPlayer(g, ctx, fx);
+  }
 
   ctx.globalCompositeOperation = 'source-over';
   ctx.shadowBlur = 0;
@@ -506,6 +509,43 @@ function drawReticle(g: Game, ctx: CanvasRenderingContext2D, fx: Game['fx']): vo
   ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.restore();
+  ctx.shadowBlur = 0;
+}
+
+/** Other human players, drawn in their assigned team colour. */
+function drawRemotePlayers(g: Game, ctx: CanvasRenderingContext2D, fx: Game['fx']): void {
+  for (let i = 0; i < g.remotePlayers.length; i++) {
+    const rp = g.remotePlayers[i]!;
+    const color = REMOTE_COLORS[rp.colorIndex % REMOTE_COLORS.length]!;
+
+    ctx.save();
+    ctx.translate(rp.x, rp.y);
+    ctx.rotate(rp.angle);
+    if (fx.shadows) { ctx.shadowBlur = 20; ctx.shadowColor = color; }
+    ctx.fillStyle = `${color}26`;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(20, 0); ctx.lineTo(-12, -13); ctx.lineTo(-6, 0); ctx.lineTo(-12, 13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // Name above, health bar below.
+    ctx.save();
+    ctx.shadowBlur = 0;
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 10px ui-monospace, monospace';
+    ctx.fillStyle = color;
+    ctx.fillText(rp.name, rp.x, rp.y - rp.r - 16);
+    const bw = 30, bh = 3;
+    ctx.fillStyle = 'rgba(11,16,32,0.9)';
+    ctx.fillRect(rp.x - bw / 2, rp.y + rp.r + 8, bw, bh);
+    ctx.fillStyle = color;
+    ctx.fillRect(rp.x - bw / 2, rp.y + rp.r + 8, bw * Math.max(0, rp.hp / rp.maxHp), bh);
+    ctx.restore();
+  }
   ctx.shadowBlur = 0;
 }
 

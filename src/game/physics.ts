@@ -120,6 +120,59 @@ export class SpatialHash<T extends { x: number; y: number; r: number }> {
 }
 
 /**
+ * Integrate one body's movement for a single fixed step.
+ *
+ * This is the authoritative movement rule, shared by three callers that must
+ * never disagree:
+ *   1. the local game loop (`engine.stepPlayer`)
+ *   2. client-side prediction (`src/network/client.ts`)
+ *   3. the C++ server's simulation (`server/src/game/Movement.cpp`), which
+ *      mirrors this formula exactly
+ *
+ * Because it is pure and depends only on its arguments, the client can replay
+ * a run of past inputs during reconciliation and land on the same position the
+ * server computed.
+ *
+ * `dt` must be the fixed simulation step, never a wall-clock delta.
+ */
+export function integrateMovement(
+  b: { x: number; y: number; vx: number; vy: number; r: number },
+  mx: number,
+  my: number,
+  dt: number,
+  arenaW: number,
+  arenaH: number,
+  maxSpeed: number,
+  accel = 3400,
+  frictionBase = 0.0009,
+): void {
+  let ix = mx, iy = my;
+  const m = Math.hypot(ix, iy) || 1;
+  if (m > 1) { ix /= m; iy /= m; }
+
+  b.vx += ix * accel * dt;
+  b.vy += iy * accel * dt;
+  const friction = Math.pow(frictionBase, dt);
+  b.vx *= friction;
+  b.vy *= friction;
+
+  const sp = Math.hypot(b.vx, b.vy);
+  if (sp > maxSpeed) { b.vx = (b.vx / sp) * maxSpeed; b.vy = (b.vy / sp) * maxSpeed; }
+
+  b.x += b.vx * dt;
+  b.y += b.vy * dt;
+
+  // Clamp to the arena and cancel the velocity component into the wall, so a
+  // ship slides along the boundary instead of sticking to it.
+  const nx = b.x < b.r ? b.r : b.x > arenaW - b.r ? arenaW - b.r : b.x;
+  const ny = b.y < b.r ? b.r : b.y > arenaH - b.r ? arenaH - b.r : b.y;
+  if (nx !== b.x) b.vx = 0;
+  if (ny !== b.y) b.vy = 0;
+  b.x = nx;
+  b.y = ny;
+}
+
+/**
  * Narrow phase: the closest enemy to a point, within `maxDist`.
  *
  * Used by the seeker (homing) weapon to pick a lock-on target. Iterates the
