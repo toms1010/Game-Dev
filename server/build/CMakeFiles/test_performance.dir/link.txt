@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/test_performance.dir/link.d CMakeFiles/test_performance.dir/tests/test_performance.cpp.o -o test_performance  libneon_core.a -ldl

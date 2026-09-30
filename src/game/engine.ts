@@ -26,11 +26,12 @@
 import {
   BASE_AREA, BASE_H, BASE_W, MAX_ASPECT, MIN_ASPECT, Pool, TAU,
   clamp, detectQuality, emptyInput, rand, resolveFx, sweepBy, sweepByPooled, sweepPooled,
-  WAVES_PER_LEVEL,
+  WAVES_PER_LEVEL, ENEMY_CONFIG,
   type Bullet, type Enemy, type FxProfile, type Ghost, type Input, type Particle,
   type Pickup, type PickupKind, type Pop, type Quality, type RemotePlayer, type Shockwave, type Vec,
   type WeaponType, type WeaponUpgrade,
 } from './entities';
+import type { EnemyKindId } from '../network/protocol';
 import { SpatialHash, segmentIntersectsCircle, nearestEnemy, integrateMovement } from './physics';
 import {
   isBossWave, maxConcurrentEnemies, rosterSize, spawnEnemy, spawnEnemyAt,
@@ -59,6 +60,21 @@ const MAX_PICKUPS = 64;
 const PICKUP_COLOR: Record<PickupKind, string> = {
   health: '#4ade80', power: '#ffd166', shield: '#38bdf8', rapid: '#f472b6', freeze: '#a5f3fc',
 };
+
+/** Enemy silhouette colours, keyed by the protocol's archetype id. */
+const ENEMY_COLORS: Record<EnemyKindId, string> = {
+  grunt: ENEMY_CONFIG.grunt.color,
+  rusher: ENEMY_CONFIG.rusher.color,
+  tank: ENEMY_CONFIG.tank.color,
+  shooter: ENEMY_CONFIG.shooter.color,
+  splitter: ENEMY_CONFIG.splitter.color,
+  healer: ENEMY_CONFIG.healer.color,
+  boss: ENEMY_CONFIG.boss.color,
+};
+
+/** Re-exported so the network layer can label server entities. */
+export type { EnemyKindId };
+export { ENEMY_KINDS } from '../network/protocol';
 
 /** Roll of a single pickup drop. */
 function rollPickupKind(): PickupKind {
@@ -169,7 +185,7 @@ export class Game {
    * Written by `src/network/interpolation.ts` between frames; the simulation
    * itself never touches it.
    */
-  remotePlayers: RemotePlayer[] = [];
+  remotePlayers: readonly RemotePlayer[] = [];
 
   /**
    * Visual-only offset applied to the local ship so a reconciliation
@@ -833,6 +849,148 @@ export class Game {
 
     this.compact();
     this.decayShake(frameDt);
+  }
+
+  /**
+   * Networked step.
+   *
+   * Deliberately *not* a gameplay simulation:
+   *   - the ship is moved by the prediction layer, not here, so there is
+   *     exactly one integrator per frame
+   *   - enemies, health and score arrive in snapshots
+   *   - the local gun still fires tracers so the weapon feels instant, but
+   *     nothing is resolved locally: the server decides every hit
+   *
+   * Everything that remains is cosmetic, which is why it can run even while
+   * the socket is down and the player is effectively in a local sandbox.
+   */
+  private updateNet(dtRaw: number, input: Input): void {
+    const frameDt = Math.min(dtRaw, 0.033);
+    this.time += frameDt;
+    const p = this.player;
+
+    this.advanceStars(frameDt);
+    this.decayRingFx(frameDt);
+
+    if (!this.over) {
+      // Aim keeps local responsiveness even though position is predicted.
+      if (input.aim) {
+        const a = Math.atan2(input.aim.y - p.y, input.aim.x - p.x);
+        let d = a - p.angle;
+        while (d > Math.PI) d -= TAU;
+        while (d < -Math.PI) d += TAU;
+        p.angle += d * Math.min(1, frameDt * 26);
+      }
+      p.bob = (p.bob + frameDt * 4) % TAU;
+      p.cd -= frameDt;
+      if (input.firing && p.cd <= 0) {
+        fireWeapon(this);
+        p.cd = fireInterval(this);
+      }
+      if (p.shield > 0) p.shield -= frameDt;
+      if (p.rapid > 0) p.rapid -= frameDt;
+    }
+
+    this.advanceBullets(frameDt);
+    this.advanceParticles(frameDt);
+    this.advancePops(frameDt);
+
+    // Tracers and effects still need reaping; enemies are refreshed from the
+    // network instead of swept here.
+    sweepPooled(this.bullets, this.bulletPool);
+    sweepByPooled(this.particles, this.particlePool, (p2) => p2.life > 0);
+    sweepBy(this.pops, (q) => q.life > 0);
+    sweepBy(this.shockwaves, (s) => s.life > 0);
+    sweepBy(this.ghosts, (g2) => g2.life > 0);
+    this.decayShake(frameDt);
+  }
+
+  /**
+   * Switches between local and server-authoritative play.
+   *
+   * Leaving net mode clears the borrowed enemy field so the local spawner
+   * starts from a clean arena rather than inheriting dead server entities.
+   */
+  setNetMode(on: boolean): void {
+    if (this.netMode === on) return;
+    this.netMode = on;
+    if (on) {
+      this.enemies.length = 0;
+      this.bullets.length = 0;
+      this.netEnemies.clear();
+      this.moveTarget = null;
+    } else {
+      for (const e of this.netEnemies.values()) this.enemyPool.release(e);
+      this.netEnemies.clear();
+      this.enemies.length = 0;
+      this.pendingUpgrade = false;
+      this.upgradeOptions = [];
+      this.startWave(this.wave);
+    }
+  }
+
+  /**
+   * Replaces the visible enemy field with the interpolated server state.
+   *
+   * Objects are pooled and keyed by server id, so a steady match performs no
+   * allocation and each enemy keeps its identity (and therefore its spawn
+   * animation) between frames.
+   */
+  syncRemoteEnemies(
+    list: readonly { id: number; kind: EnemyKindId; x: number; y: number; r: number; hp: number; angle: number }[],
+  ): void {
+    if (!this.netMode) return;
+    const live = new Set<number>();
+    for (let i = 0; i < list.length; i++) {
+      const w = list[i]!;
+      live.add(w.id);
+      let e = this.netEnemies.get(w.id);
+      if (!e) {
+        e = this.acquireEnemy();
+        e.kind = w.kind;
+        e.maxHp = Math.max(1, w.hp);
+        e.hp = w.hp;
+        e.color = ENEMY_COLORS[w.kind] ?? '#ff4d6d';
+        e.level = 1;
+        e.score = 0;
+        e.r = w.r;
+        // Start at zero scale so a new arrival pops in.
+        e.pulse = 0;
+        e.spin = 0;
+        e.freeze = 0;
+        e.hit = 0;
+        e.cd = 99;
+        e.mini = false;
+        e.vx = 0;
+        e.vy = 0;
+        this.netEnemies.set(w.id, e);
+        this.enemies.push(e);
+      }
+      e.x = w.x;
+      e.y = w.y;
+      e.r = w.r;
+      e.hp = w.hp;
+      e.pulse = Math.min(1, e.pulse + 0.05);
+      // Enemies are drawn axis-aligned per the server's angle field.
+      e.spin = w.angle;
+    }
+    // Retire ids the server no longer reports.
+    for (const [id, e] of this.netEnemies) {
+      if (live.has(id)) continue;
+      this.netEnemies.delete(id);
+      const idx = this.enemies.indexOf(e);
+      if (idx >= 0) {
+        this.enemies[idx] = this.enemies[this.enemies.length - 1]!;
+        this.enemies.pop();
+      }
+      this.enemyPool.release(e);
+    }
+  }
+
+  /** Applies the server's authoritative health for the local ship. */
+  setNetHealth(hp: number, maxHp: number): void {
+    this.player.hp = hp;
+    this.player.maxHp = maxHp;
   }
 
   private stepPlayer(gameDt: number, input: Input): void {

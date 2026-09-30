@@ -1,0 +1,160 @@
+Start testing: Sep 30 13:00 PST
+----------------------------------------------------------
+1/4 Testing: test_game
+1/4 Test: test_game
+Command: "/home/tommyp/Desktop/Game Dev/server/build/test_game"
+Directory: /home/tommyp/Desktop/Game Dev/server/build
+"test_game" start time: Sep 30 13:00 PST
+Output:
+----------------------------------------------------------
+  [32mPASS[0m  movement: input accelerates toward the requested direction
+  [32mPASS[0m  movement: speed is capped, so holding a stick cannot exceed max speed
+  [32mPASS[0m  movement: an over-long input vector is normalised, not amplified
+  [32mPASS[0m  movement: the ship cannot leave the arena
+  [32mPASS[0m  movement: hitting a wall cancels only the normal component
+  [32mPASS[0m  movement: a zero-length arena is handled without NaN
+  [32mPASS[0m  collision: a fast projectile cannot tunnel through an enemy
+  [32mPASS[0m  collision: a projectile that passes wide does not hit
+  [32mPASS[0m  collision: a stationary test degenerates to a point overlap
+  [32mPASS[0m  collision: the spatial hash finds a nearby entity and misses a distant one
+  [32mPASS[0m  collision: the spatial hash survives a resize
+  [32mPASS[0m  weapons: the blaster emits one projectile per stream
+  [32mPASS[0m  weapons: the tri-spread emits a three-pellet cone
+  [32mPASS[0m  weapons: power-ups stack extra streams on any weapon
+  [32mPASS[0m  weapons: the fire-rate upgrade actually shortens the interval
+  [32mPASS[0m  weapons: the rapid-fire pickup shortens the interval
+  [32mPASS[0m  weapons: the damage upgrade raises per-pellet damage
+  [32mPASS[0m  weapons: seekers are flagged and slower than the blaster
+  [32mPASS[0m  damage: i-frames prevent a second hit landing immediately
+  [32mPASS[0m  damage: health never drops below zero and death is counted once
+  [32mPASS[0m  damage: a shield absorbs hits
+  [32mPASS[0m  damage: healing is capped at max health
+  [32mPASS[0m  abilities: dash respects its cooldown
+  [32mPASS[0m  abilities: a bomb consumes a charge and then refuses
+  [32mPASS[0m  respawn: restores health, position and charges
+  [32mPASS[0m  state: joining adds a player and refuses past the cap
+  [32mPASS[0m  state: two players start at different spawn points
+  [32mPASS[0m  state: server-side input moves the authoritative position
+  [32mPASS[0m  state: a client cannot move by claiming a huge input vector
+  [32mPASS[0m  state: fire rate is enforced by the server, not the client
+  [32mPASS[0m  state: a bomb clears the arena and scores the kills
+  [32mPASS[0m  state: killing a splitter spawns children that do not split again
+  [32mPASS[0m  state: enemy contact damage is applied on the server
+  [32mPASS[0m  state: a dead player is respawned after the delay
+  [32mPASS[0m  state: progression raises the level every five waves
+  [32mPASS[0m  state: the enemy field is capped, deferring rather than dropping
+  [32mPASS[0m  state: the projectile pool is capped and never grows
+  [32mPASS[0m  performance: a tick with a full entity budget stays within budget
+
+38 passed, 0 failed, 38 total
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"test_game" end time: Sep 30 13:00 PST
+"test_game" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/4 Testing: test_network
+2/4 Test: test_network
+Command: "/home/tommyp/Desktop/Game Dev/server/build/test_network"
+Directory: /home/tommyp/Desktop/Game Dev/server/build
+"test_network" start time: Sep 30 13:00 PST
+Output:
+----------------------------------------------------------
+  [32mPASS[0m  protocol: a well-formed input message round-trips
+  [32mPASS[0m  protocol: malformed and unknown frames are rejected, not crashed on
+  [32mPASS[0m  protocol: wrong-typed fields fall back instead of throwing
+  [32mPASS[0m  protocol: an oversized name field is truncated, not buffered
+  [32mPASS[0m  protocol: every server message type serialises and parses back
+  [32mPASS[0m  protocol: a snapshot carries the ack the client needs to reconcile
+  [32mPASS[0m  protocol: quantisation keeps positions within its stated precision
+  [32mPASS[0m  validate: a legitimate sample is accepted and advances the watermark
+  [32mPASS[0m  validate: a replayed or reordered sequence is refused
+  [32mPASS[0m  validate: NaN and infinity are refused before reaching the integrator
+  [32mPASS[0m  validate: an absurd movement vector is refused, not clamped
+  [32mPASS[0m  validate: an aim point beyond the limit is clamped by default
+  [32mPASS[0m  validate: sequence zero is always refused
+  [32mPASS[0m  validate: only known abilities are accepted
+  [32mPASS[0m  validate: names are stripped of control and invisible characters
+  [32mPASS[0m  validate: only supported protocol versions and modes pass
+  [32mPASS[0m  rate limit: the message bucket allows a burst then throttles
+  [32mPASS[0m  rate limit: tokens refill over time
+  [32mPASS[0m  rate limit: sustained abuse is disconnected, not just throttled
+  [32mPASS[0m  rate limit: an unknown session is refused outright
+  [32mPASS[0m  rate limit: a hard bandwidth breach disconnects on the spot
+  [32mPASS[0m  rate limit: the input budget is separate and tighter
+  [32mPASS[0m  rate limit: detaching a session forgets its budget
+  [32mPASS[0m  reconnection: backoff doubles and then holds at the ceiling
+  [32mPASS[0m  ticker: a fixed step produces a whole number of ticks
+  [32mPASS[0m  ticker: a long stall drops time instead of spiralling
+  [32mPASS[0m  ticker: a partial step is carried, not lost
+
+27 passed, 0 failed, 27 total
+<end of output>
+Test time =   0.01 sec
+----------------------------------------------------------
+Test Passed.
+"test_network" end time: Sep 30 13:00 PST
+"test_network" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/4 Testing: test_security
+3/4 Test: test_security
+Command: "/home/tommyp/Desktop/Game Dev/server/build/test_security"
+Directory: /home/tommyp/Desktop/Game Dev/server/build
+"test_security" start time: Sep 30 13:00 PST
+Output:
+----------------------------------------------------------
+  [32mPASS[0m  anti-cheat: a client cannot teleport by sending a huge input vector
+  [32mPASS[0m  anti-cheat: a client cannot leave the arena
+  [32mPASS[0m  anti-cheat: firing faster than the weapon allows is impossible
+  [32mPASS[0m  anti-cheat: health is server-owned; clients cannot set it
+  [32mPASS[0m  anti-cheat: i-frames stop contact damage from stacking per frame
+  [32mPASS[0m  anti-cheat: score only moves when the server awards a kill
+  [32mPASS[0m  anti-cheat: a bomb is charged against the server's own count
+  [32mPASS[0m  anti-cheat: a bomb cannot be used while dead
+  [32mPASS[0m  anti-cheat: dashing respects its cooldown when spammed
+  [32mPASS[0m  anti-cheat: input for a player who left the match is ignored
+  [32mPASS[0m  anti-cheat: a bomb does not corrupt the enemy list it is iterating
+
+11 passed, 0 failed, 11 total
+<end of output>
+Test time =   0.02 sec
+----------------------------------------------------------
+Test Passed.
+"test_security" end time: Sep 30 13:00 PST
+"test_security" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/4 Testing: test_performance
+4/4 Test: test_performance
+Command: "/home/tommyp/Desktop/Game Dev/server/build/test_performance"
+Directory: /home/tommyp/Desktop/Game Dev/server/build
+"test_performance" start time: Sep 30 13:00 PST
+Output:
+----------------------------------------------------------
+        8 players: 0.0036 ms/tick
+  [32mPASS[0m  budget: 100 players move within the per-tick budget
+        500 enemies: 0.2493 ms/tick
+  [32mPASS[0m  budget: 500 entities tick within budget
+        200 enemies + firing: 0.0731 ms/tick
+  [32mPASS[0m  budget: 1000 projectiles resolve within budget
+  [32mPASS[0m  budget: the projectile pool never allocates past its ceiling
+        hash query: 0.000197 ms, 20 candidates
+  [32mPASS[0m  budget: spatial hash queries stay far cheaper than a linear scan
+        6000 ticks: 36.35 ms total (0.0061 ms/tick), wave 3, 29 entities
+  [32mPASS[0m  budget: 2000 ticks of a full match stay in the frame budget
+        enemy sweep: 0.000180 ms
+  [32mPASS[0m  budget: enemy removal does not allocate per tick
+
+7 passed, 0 failed, 7 total
+<end of output>
+Test time =   0.09 sec
+----------------------------------------------------------
+Test Passed.
+"test_performance" end time: Sep 30 13:00 PST
+"test_performance" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 30 13:00 PST

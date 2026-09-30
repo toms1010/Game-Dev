@@ -1,0 +1,63 @@
+{
+  "_comment": [
+    "Neon Vanguard server configuration.",
+    "Every value here has a built-in default, so a partial file is fine.",
+    "NEON_* environment variables override this file, and command-line flags",
+    "override both. See `neon_vanguard_server --help`."
+  ],
+
+  "host": "0.0.0.0",
+  "port": 8080,
+
+  "tick_rate": 60,
+  "_tick_rate": "Fixed simulation rate. Gameplay is defined in terms of this; the server will not run faster to catch up (see tick_budget.max_catchup_ticks).",
+
+  "arena": {
+    "width": 960,
+    "height": 600,
+    "_note": "Baseline arena in world units. The client reshapes its own arena to the device aspect while holding this area constant, so difficulty is device independent. WELCOME tells each client which size to use; these values are the default for a browser at 16:10."
+  },
+
+  "io_threads": 0,
+  "_io_threads": "0 derives a sensible count from the core count. The game loop is a single timer; more threads mostly add contention on the session mutex.",
+
+  "tick_budget": {
+    "snapshot_hz": 20,
+    "_snapshot_hz": "Broadcast rate. Lower it on a metered connection; the client interpolates between snapshots and only needs enough to stay smooth. Must divide tick_rate.",
+    "max_players": 8,
+    "max_projectiles": 1024,
+    "max_entities": 512,
+    "_max_entities": "Hard ceiling on simulated entities. Waves beyond the cap are deferred, never dropped, so a player never has less to clear because of this number.",
+    "max_catchup_ticks": 5,
+    "_max_catchup_ticks": "How many ticks may run back-to-back after a stall. Beyond this the surplus time is discarded: replaying a backlog while already behind only delays the next frame."
+  },
+
+  "rate_limits": {
+    "messages_per_second": 120,
+    "burst": 240,
+    "bytes_per_second": 65536,
+    "hard_bytes_per_second": 262144,
+    "input_per_second": 90,
+    "_note": "Per connection. A client that stays over the sustained rate is throttled; one that keeps pushing is disconnected, because nothing legitimate looks like that."
+  },
+
+  "database": {
+    "connection_string": "",
+    "_connection_string": "Leave empty to run entirely in memory. libpq is loaded at runtime with dlopen, so the server starts and plays either way. Example: postgresql://neon:neon@localhost:5432/neon",
+    "auto_migrate": true,
+    "worker_threads": 1,
+    "batch_size": 256
+  },
+
+  "match": {
+    "start_delay": 3.0,
+    "_start_delay": "Seconds to wait for a second player before starting anyway. This is what keeps a solo player from being stuck in a queue.",
+    "rejoin_grace": 30.0
+  },
+
+  "log": {
+    "level": "info",
+    "to_file": false,
+    "file": "neon-server.log"
+  }
+}

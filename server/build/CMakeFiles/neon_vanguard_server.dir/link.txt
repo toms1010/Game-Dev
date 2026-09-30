@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/neon_vanguard_server.dir/link.d CMakeFiles/neon_vanguard_server.dir/src/main.cpp.o -o neon_vanguard_server  libneon_core.a -ldl

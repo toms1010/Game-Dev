@@ -25,6 +25,8 @@ export interface SaveData {
   totalKills: number;
   bossesDefeated: number;
   wavesCleared: number;
+  /** Deployments completed. Drives the kills-per-deployment statistic. */
+  gamesPlayed: number;
   upgrades: HangarUpgrades;
   unlockedWeapons: string[];
   completedAchievements: string[];
@@ -41,6 +43,7 @@ const DEFAULT_SAVE: SaveData = {
   totalKills: 0,
   bossesDefeated: 0,
   wavesCleared: 0,
+  gamesPlayed: 0,
   upgrades: {
     healthLevel: 0,
     speedLevel: 0,
@@ -103,6 +106,7 @@ function cloneDefault(): SaveData {
     totalKills: 0,
     bossesDefeated: 0,
     wavesCleared: 0,
+    gamesPlayed: 0,
     upgrades: { ...DEFAULT_SAVE.upgrades },
     unlockedWeapons: [...DEFAULT_SAVE.unlockedWeapons],
     completedAchievements: [],
@@ -132,6 +136,7 @@ export class SaveManager {
         totalKills: typeof parsed.totalKills === 'number' ? parsed.totalKills : 0,
         bossesDefeated: typeof parsed.bossesDefeated === 'number' ? parsed.bossesDefeated : 0,
         wavesCleared: typeof parsed.wavesCleared === 'number' ? parsed.wavesCleared : 0,
+        gamesPlayed: typeof parsed.gamesPlayed === 'number' ? parsed.gamesPlayed : 0,
         upgrades: {
           healthLevel: parsed.upgrades?.healthLevel ?? 0,
           speedLevel: parsed.upgrades?.speedLevel ?? 0,

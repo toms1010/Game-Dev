@@ -1,0 +1,88 @@
+# Neon Vanguard development stack.
+#
+#   docker compose -f server/docker/docker-compose.yml up --build
+#
+# Starts the game server and PostgreSQL. Redis is included but not required:
+# nothing depends on it yet, and it is there so matchmaking/session scaling
+# has somewhere obvious to go without a rewrite.
+#
+# The server starts and plays with or without the database. If postgres fails
+# its health check, the server logs a warning and runs in memory rather than
+# exiting — losing persistence should not take the game down.
+
+name: neon-vanguard
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: neon
+      POSTGRES_PASSWORD: neon
+      POSTGRES_DB: neon
+      # The database is small and the dev loop is destructive by nature;
+      # speed beats durability here.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Applied on first initialisation of an empty volume only.
+      - ../config/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neon -d neon"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  neon-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    # The game server is CPU bound, and the simulation is single threaded by
+    # design. Two workers is plenty; raise the cgroup limit before the thread
+    # count.
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NEON_HOST: 0.0.0.0
+      NEON_PORT: "8080"
+      NEON_TICK_RATE: "60"
+      NEON_SNAPSHOT_HZ: "20"
+      NEON_LOG_LEVEL: "debug"
+      NEON_DATABASE_URL: "postgresql://neon:neon@postgres:5432/neon"
+    ports:
+      - "8080:8080"
+    # A tick budget overrun is a real signal, not noise: let the container
+    # collect cores rather than being throttled below the tick rate.
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/healthz | grep -q '\"status\":\"ok\"'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  postgres-data:
+  redis-data:

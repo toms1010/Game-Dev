@@ -64,7 +64,8 @@ export type PlayerWire = [number, number, number, number, number, number, number
 
 export interface NetPlayer {
   id: number;
-  name: string;
+  /** Carried by the join roster, not by per-tick snapshots. */
+  name?: string;
   x: number;
   y: number;
   vx: number;

@@ -14,7 +14,7 @@
  */
 
 import type { RemotePlayer } from '../game/entities';
-import type { EnemyWire, PlayerWire } from './protocol';
+import { ENEMY_KINDS, type EnemyKindId, type EnemyWire, type PlayerWire } from './protocol';
 
 export interface InterpolatorConfig {
   /** How far behind the newest snapshot to render, in ms. */
@@ -34,6 +34,17 @@ export const DEFAULT_INTERPOLATION: InterpolatorConfig = {
   shortestAngle: true,
 };
 
+/** A sampled enemy: the server's archetype plus an interpolated transform. */
+export interface InterpolatedEnemy {
+  id: number;
+  kind: EnemyKindId;
+  x: number;
+  y: number;
+  r: number;
+  hp: number;
+  angle: number;
+}
+
 /** One authoritative frame, with the wall-clock time it landed. */
 export interface BufferedSnapshot {
   tick: number;
@@ -44,6 +55,11 @@ export interface BufferedSnapshot {
 }
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+/** Resolves the numeric archetype id on the wire to its name. */
+function enemyKindName(id: number): EnemyKindId {
+  return ENEMY_KINDS[id] ?? 'grunt';
+}
 
 /** Interpolates two angles along the shortest arc. */
 function lerpAngle(a: number, b: number, t: number, shortest: boolean): number {
@@ -65,7 +81,7 @@ export class SnapshotBuffer {
   private remoteIndex = new Map<number, RemotePlayer>();
   /** Scratch output, reused to keep the hot path allocation free. */
   private outPlayers: RemotePlayer[] = [];
-  private outEnemies: { id: number; kind: string; x: number; y: number; r: number; hp: number; angle: number }[] = [];
+  private outEnemies: InterpolatedEnemy[] = [];
 
   constructor(cfg: Partial<InterpolatorConfig> = {}) {
     this.cfg = { ...DEFAULT_INTERPOLATION, ...cfg };
@@ -163,11 +179,11 @@ export class SnapshotBuffer {
       seenEnemies.add(b[0]);
       const a = eById.get(b[0]);
       if (!a) {
-        this.outEnemies.push({ id: b[0], kind: '', x: b[2], y: b[3], r: b[4], hp: b[5], angle: b[6] });
+        this.outEnemies.push({ id: b[0], kind: enemyKindName(b[1]), x: b[2], y: b[3], r: b[4], hp: b[5], angle: b[6] });
         continue;
       }
       this.outEnemies.push({
-        id: b[0], kind: '',
+        id: b[0], kind: enemyKindName(b[1]),
         x: lerp(a[2], b[2], t),
         y: lerp(a[3], b[3], t),
         r: b[4],
@@ -224,7 +240,7 @@ export class SnapshotBuffer {
   get players(): readonly RemotePlayer[] { return this.outPlayers; }
 
   /** The sampled enemy field. Valid until the next `sample()` call. */
-  get enemies(): readonly { id: number; kind: string; x: number; y: number; r: number; hp: number; angle: number }[] {
+  get enemies(): readonly InterpolatedEnemy[] {
     return this.outEnemies;
   }
 }

@@ -1,0 +1,13 @@
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/neon_core.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/neon_vanguard_server.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/test_game.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/test_network.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/test_security.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/test_performance.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/test.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/edit_cache.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/rebuild_cache.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/list_install_components.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/install.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/install/local.dir
+/home/tommyp/Desktop/Game Dev/server/build/CMakeFiles/install/strip.dir
