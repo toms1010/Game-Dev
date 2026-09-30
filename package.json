@@ -8,14 +8,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "sync:mobile": "node mobile/scripts/sync-html.js",
-    "build:mobile": "vite build && node mobile/scripts/sync-html.js && echo '✓ Web built + mobile synced. Run: cd mobile && npx expo start'",
+    "build:mobile": "vite build && node mobile/scripts/sync-html.js && echo '\u2713 Web built + mobile synced. Run: cd mobile && npx expo start'",
     "dev:mobile": "node mobile/scripts/dev-mobile.js",
     "dev:mobile:live": "node mobile/scripts/dev-mobile.js --live",
     "dev:mobile:legacy": "vite build --watch & cd mobile && npx expo start",
     "expo": "cd mobile && npx expo start",
     "expo:web": "cd mobile && npx expo start --web",
     "expo:android": "cd mobile && npx expo start --android",
-    "expo:ios": "cd mobile && npx expo start --ios"
+    "expo:ios": "cd mobile && npx expo start --ios",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -31,6 +32,7 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.1",
     "chokidar": "^5.0.0",
+    "playwright": "^1.56.0",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.3.2",

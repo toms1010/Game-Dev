@@ -170,6 +170,36 @@ export default function App() {
     };
   }, [setPhaseBoth]);
 
+  /**
+   * Development-only inspection hook.
+   *
+   * Exposes the live game instance so states that are otherwise unreachable
+   * without playing for minutes — a cleared wave, a death, a specific quality
+   * tier — can be driven from the console or from the screenshot harness in
+   * `scripts/screenshots.mjs`. Gated on `import.meta.env.DEV`, so it is
+   * compiled out of the production bundle entirely.
+   */
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    // Deliberately no cleanup. React's StrictMode double-invokes effects in
+    // development, so a cleanup that deleted the global would race the
+    // re-mount and leave it missing for anything that looks for it. The hook
+    // reads through to the live refs, so a stale entry costs nothing.
+    (window as unknown as { __NEON__?: unknown }).__NEON__ = {
+      get game() { return gameRef.current; },
+      phase: () => phaseRef.current,
+      setPhase: (next: Phase) => setPhaseBoth(next),
+      clearWave: () => {
+        const g = gameRef.current;
+        g.enemies.length = 0;
+        g.enemiesRemainingInWave = 0;
+        g.waveSpawningFinished = true;
+      },
+      kill: () => { gameRef.current.damagePlayer(9999); },
+      setScore: (n: number) => { gameRef.current.score = n; },
+    };
+  }, [setPhaseBoth]);
+
   // Push settings into the engine and the audio system.
   useEffect(() => {
     gameRef.current.setQuality(settings.quality);

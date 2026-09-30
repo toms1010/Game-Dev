@@ -26,7 +26,17 @@ export default defineConfig({
       clientPort: 5173,
     },
     watch: {
-      ignored: ['**/mobile/**', '**/dist/**', '**/.expo/**', '**/node_modules/**'],
+      // docs/ holds the generated screenshots. Writing a PNG there must not
+      // trigger a full page reload of the open game, which would wipe any
+      // dev instrumentation partway through a capture.
+      ignored: [
+        '**/mobile/**',
+        '**/dist/**',
+        '**/.expo/**',
+        '**/node_modules/**',
+        '**/docs/**',
+        '**/server/build/**',
+      ],
     },
   },
   // vite build --watch also watches mobile/dist by default and creates infinite loop
