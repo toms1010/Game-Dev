@@ -153,8 +153,13 @@ const FREEZE_CSS = `
  * flaky — the symptom being readiness checks that time out even though the
  * page is demonstrably ready.
  */
-async function capture(page, shot) {
+async function capture(browser, shot) {
   const errors = [];
+  const page = await browser.newPage({
+    viewport: shot.viewport,
+    deviceScaleFactor: 1,
+    reducedMotion: 'reduce',
+  });
   page.on('pageerror', (e) => {
     // The Vite dev server has no /ws/game endpoint, so the game's network
     // client cannot connect. That is expected here — the shots are meant to
@@ -164,7 +169,6 @@ async function capture(page, shot) {
   });
   page.setDefaultTimeout(15000);
 
-  await page.setViewportSize(shot.viewport);
   await page.goto(BASE, { waitUntil: 'load' });
   await page.addStyleTag({ content: FREEZE_CSS });
 
@@ -243,6 +247,7 @@ async function capture(page, shot) {
   }
 
   await shoot(page, shot.name);
+  await page.close().catch(() => {});
   return errors;
 }
 
@@ -291,18 +296,13 @@ async function main() {
       '--disable-renderer-backgrounding',
     ],
   });
-  const page = await browser.newPage({
-    viewport: PHONE,
-    deviceScaleFactor: 2,
-    reducedMotion: 'reduce',
-  });
   let failures = 0;
   try {
     for (const shot of SHOTS) {
       let lastError = null;
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          const errors = await capture(page, shot);
+          const errors = await capture(browser, shot);
           const flag = errors.length ? `  \x1b[33m${errors.length} page error(s)\x1b[0m` : '';
           console.log(`  \x1b[32m✓\x1b[0m ${shot.name.padEnd(22)} ${describe(shot)}${flag}`);
           for (const e of errors) console.log(`      ${e}`);
