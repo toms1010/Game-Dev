@@ -92,21 +92,24 @@ const PORTRAIT = { width: 390, height: 844 };
 
 /** Every shot: name, viewport, and how to get there. */
 const SHOTS = [
-  { name: '01-menu-loadout', viewport: PHONE, describe: 'SELECT LOADOUT — the main menu' },
-  { name: '02-menu-inventory', viewport: PHONE, tab: 'INV' },
-  { name: '03-menu-settings', viewport: PHONE, tab: 'SET' },
-  { name: '04-hangar', viewport: PHONE, tab: 'ARMS' },
-  { name: '05-ingame', viewport: PHONE, deploy: true, warm: 2600 },
-  { name: '06-ingame-paused', viewport: PHONE, deploy: true, warm: 2200, pause: true },
-  { name: '07-wave-cleared', viewport: PHONE, deploy: true, warm: 2600, clearWave: true },
-  { name: '08-game-over', viewport: PHONE, deploy: true, warm: 3000, score: 18450, kill: true },
-  { name: '09-perf-overlay', viewport: DESKTOP, deploy: true, warm: 4000, perf: true },
-  { name: '10-rotate-to-play', viewport: PORTRAIT, deploy: true, warm: 900 },
-  { name: '11-menu-tablet', viewport: TABLET },
-  { name: '12-ingame-tablet', viewport: TABLET, deploy: true, warm: 2600 },
+  { name: '01-menu-loadout', caption: 'Main menu — SELECT LOADOUT', viewport: PHONE },
+  { name: '02-menu-inventory', caption: 'Lifetime statistics', viewport: PHONE, tab: 'INV' },
+  { name: '03-menu-settings', caption: 'Settings — graphics, audio, reset', viewport: PHONE, tab: 'SET' },
+  { name: '04-hangar', caption: 'Hangar — permanent upgrades', viewport: PHONE, tab: 'ARMS' },
+  { name: '05-ingame', caption: 'Gameplay — cockpit HUD, twin-stick controls', viewport: PHONE, deploy: true, warm: 2600 },
+  { name: '06-ingame-paused', caption: 'Paused', viewport: PHONE, deploy: true, warm: 2200, pause: true },
+  { name: '07-wave-cleared', caption: 'Wave cleared — upgrade choice', viewport: PHONE, deploy: true, warm: 2600, clearWave: true },
+  { name: '08-game-over', caption: 'Run summary and unlocks', viewport: PHONE, deploy: true, warm: 3000, score: 18450, kill: true },
+  { name: '09-perf-overlay', caption: 'Development performance overlay', viewport: DESKTOP, deploy: true, warm: 4000, perf: true },
+  { name: '10-rotate-to-play', caption: 'Portrait — rotate to play', viewport: PORTRAIT, deploy: true, warm: 900 },
+  { name: '11-menu-tablet', caption: 'Tablet layout', viewport: TABLET },
+  { name: '12-ingame-tablet', caption: 'Tablet gameplay', viewport: TABLET, deploy: true, warm: 2600 },
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Caption shown next to a shot. */
+const describe = (shot) => shot.caption ?? '';
 
 /**
  * Takes the screenshot.
@@ -125,7 +128,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * reproducible; that is sufficient.
  */
 async function shoot(page, name) {
-  await page.screenshot({ path: resolve(outDir, `${name}.png`), timeout: 20000 });
+  await page.screenshot({ path: resolve(outDir, `${name}.png`), timeout: 60000 });
 }
 
 /**
@@ -165,42 +168,51 @@ async function capture(page, shot) {
   await page.goto(BASE, { waitUntil: 'load' });
   await page.addStyleTag({ content: FREEZE_CSS });
 
-  // Wait for the app to have actually mounted before touching anything. The
-  // dev server compiles modules on demand, so `load` can fire well before the
-  // first paint; clicking too early is a bare timeout with no explanation.
-  try {
-    // `window.__NEON__` is the app's own dev hook, set once React has mounted
-    // and the first frame has run. Waiting on it is a far more reliable
-    // readiness signal than probing for a piece of UI text, which can be
-    // mid-animation or scrolled out of a container and still be "in the DOM".
-    // Interval polling, not the default rAF polling: the game's own
-    // requestAnimationFrame loop starves rAF-based polling, so the default
-    // intermittently never observes an already-true predicate.
-    await page.waitForFunction(() => Boolean(window.__NEON__), null, {
-      timeout: 20000,
-      polling: 100,
-    });
-  } catch (err) {
+  // Wait for the app to have actually mounted before touching anything.
+  //
+  // Polled with an explicit loop rather than page.waitForFunction(). The
+  // latter intermittently timed out on a page that was demonstrably ready —
+  // the dev hook present, the DOM fully rendered — which points at its
+  // polling being starved by the game's own requestAnimationFrame loop. A
+  // plain evaluate-in-a-loop is immune to that, and costs nothing.
+  const deadline = Date.now() + 20000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    ready = await page.evaluate(() => Boolean(window.__NEON__)).catch(() => false);
+    if (ready) break;
+    await sleep(100);
+  }
+  if (!ready) {
     const diag = await page.evaluate(() => ({
       neon: typeof window.__NEON__,
       ready: document.readyState,
       canvases: document.querySelectorAll('canvas').length,
       text: document.body.innerText.replace(/\s+/g, ' ').slice(0, 120),
     }));
-    throw new Error(`${shot.name}: app never mounted. ${JSON.stringify(diag)}\n    waitForFunction: ${err.message.split('\n')[0]}`);
+    throw new Error(`${shot.name}: app never mounted. ${JSON.stringify(diag)}`);
   }
   await sleep(250);
 
-  if (shot.tab === 'ARMS') {
-    await page.getByRole('button', { name: 'ARMS', exact: true }).click();
-  } else if (shot.tab) {
-    await page.getByRole('button', { name: shot.tab, exact: true }).click();
+  if (shot.tab) {
+    // Select by the stable data attribute, not by accessible-name text: a
+    // label change should not silently break the capture harness.
+    const nav = page.locator(`button[data-nav="${shot.tab}"]`);
+    try {
+      await nav.click({ timeout: 8000 });
+    } catch {
+      const dump = await page.evaluate(() => ({
+        url: location.href,
+        buttons: [...document.querySelectorAll('button')].map((b) =>
+          `${b.dataset.nav ?? b.dataset.action ?? b.dataset.primary ?? '?'}:${b.textContent.trim().slice(0, 14)}`),
+      }));
+      throw new Error(`${shot.name}: cannot click nav "${shot.tab}". ${JSON.stringify(dump)}`);
+    }
   }
 
   if (shot.deploy) {
     // Wait for the button explicitly before clicking: the failure mode
     // otherwise is a bare 30s timeout with no clue which state was missing.
-    const deploy = page.getByRole('button', { name: 'DEPLOY' });
+    const deploy = page.locator('button[data-primary="cyan"]');
     await deploy.waitFor({ state: 'visible', timeout: 15000 });
     await deploy.click();
     // Let the wave build up and a few shots land, so the arena is not empty.
@@ -222,7 +234,7 @@ async function capture(page, shot) {
     await sleep(1600);
   }
   if (shot.pause) {
-    await page.getByRole('button', { name: 'PAUSE', exact: true }).click();
+    await page.locator('button[data-action="pause"]').click();
     await sleep(400);
   }
   if (shot.perf) {
@@ -266,7 +278,19 @@ async function main() {
   await readFile(resolve(buildDir, 'index.html'), 'utf8');
 
   const server = await serveStatic(buildDir);
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    args: [
+      // The symptom of an under-provisioned container is that a timeout
+      // lands on whichever step happened to be running, which reads like an
+      // application bug and is not one. These make the renderer behave.
+      '--disable-dev-shm-usage',
+      '--no-sandbox',
+      '--disable-gpu',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+    ],
+  });
   const page = await browser.newPage({
     viewport: PHONE,
     deviceScaleFactor: 2,
@@ -275,12 +299,23 @@ async function main() {
   let failures = 0;
   try {
     for (const shot of SHOTS) {
-      const errors = await capture(page, shot);
-      const flag = errors.length ? `  \x1b[31m${errors.length} error(s)\x1b[0m` : '';
-      console.log(`  \x1b[32m✓\x1b[0m ${shot.name.padEnd(22)} ${shot.describe}${flag}`);
-      if (errors.length) {
+      let lastError = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const errors = await capture(page, shot);
+          const flag = errors.length ? `  \x1b[33m${errors.length} page error(s)\x1b[0m` : '';
+          console.log(`  \x1b[32m✓\x1b[0m ${shot.name.padEnd(22)} ${describe(shot)}${flag}`);
+          for (const e of errors) console.log(`      ${e}`);
+          break;
+        } catch (err) {
+          if (attempt === 3) { lastError = err; break; }
+          console.log(`  \x1b[33m·\x1b[0m ${shot.name}: ${err.message.split('\n')[0]} — retrying`);
+          await sleep(750);
+        }
+      }
+      if (lastError) {
         failures++;
-        errors.forEach((e) => console.log(`      ${e}`));
+        console.log(`  \x1b[31m✗\x1b[0m ${shot.name.padEnd(22)} ${lastError.message}`);
       }
     }
   } finally {

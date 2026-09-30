@@ -161,6 +161,7 @@ export function NavRail({ active, onSelect, disabled }: {
         return (
           <motion.button
             key={item.id}
+            data-nav={item.id}
             onClick={() => onSelect(item.id)}
             disabled={disabled}
             whileTap={{ scale: 0.94 }}
@@ -246,6 +247,7 @@ function RailButton({
   } as const;
   return (
     <motion.button
+      data-action={label.toLowerCase()}
       onClick={onClick}
       disabled={disabled}
       whileTap={{ scale: 0.92 }}
