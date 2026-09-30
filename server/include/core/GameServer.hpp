@@ -133,7 +133,7 @@ private:
     nlohmann::json handleMatches(const network::HttpRequest& request);
 
     /// Wall-clock seconds since the epoch, for persisted timestamps.
-    static double wallClockSeconds() { return utils::nowMillis() / 1000.0; }
+    static double wallClockSeconds() { return static_cast<double>(utils::nowMillis()) / 1000.0; }
 
     Executor executor_;
     Config config_;

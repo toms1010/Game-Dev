@@ -1,10 +1,10 @@
-Start testing: Sep 30 13:00 PST
+Start testing: Sep 30 13:32 PST
 ----------------------------------------------------------
 1/4 Testing: test_game
 1/4 Test: test_game
 Command: "/home/tommyp/Desktop/Game Dev/server/build/test_game"
 Directory: /home/tommyp/Desktop/Game Dev/server/build
-"test_game" start time: Sep 30 13:00 PST
+"test_game" start time: Sep 30 13:32 PST
 Output:
 ----------------------------------------------------------
   [32mPASS[0m  movement: input accelerates toward the requested direction
@@ -51,7 +51,7 @@ Output:
 Test time =   0.01 sec
 ----------------------------------------------------------
 Test Passed.
-"test_game" end time: Sep 30 13:00 PST
+"test_game" end time: Sep 30 13:32 PST
 "test_game" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -59,7 +59,7 @@ Test Passed.
 2/4 Test: test_network
 Command: "/home/tommyp/Desktop/Game Dev/server/build/test_network"
 Directory: /home/tommyp/Desktop/Game Dev/server/build
-"test_network" start time: Sep 30 13:00 PST
+"test_network" start time: Sep 30 13:32 PST
 Output:
 ----------------------------------------------------------
   [32mPASS[0m  protocol: a well-formed input message round-trips
@@ -95,7 +95,7 @@ Output:
 Test time =   0.01 sec
 ----------------------------------------------------------
 Test Passed.
-"test_network" end time: Sep 30 13:00 PST
+"test_network" end time: Sep 30 13:32 PST
 "test_network" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -103,7 +103,7 @@ Test Passed.
 3/4 Test: test_security
 Command: "/home/tommyp/Desktop/Game Dev/server/build/test_security"
 Directory: /home/tommyp/Desktop/Game Dev/server/build
-"test_security" start time: Sep 30 13:00 PST
+"test_security" start time: Sep 30 13:32 PST
 Output:
 ----------------------------------------------------------
   [32mPASS[0m  anti-cheat: a client cannot teleport by sending a huge input vector
@@ -120,10 +120,10 @@ Output:
 
 11 passed, 0 failed, 11 total
 <end of output>
-Test time =   0.02 sec
+Test time =   0.03 sec
 ----------------------------------------------------------
 Test Passed.
-"test_security" end time: Sep 30 13:00 PST
+"test_security" end time: Sep 30 13:32 PST
 "test_security" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -131,30 +131,30 @@ Test Passed.
 4/4 Test: test_performance
 Command: "/home/tommyp/Desktop/Game Dev/server/build/test_performance"
 Directory: /home/tommyp/Desktop/Game Dev/server/build
-"test_performance" start time: Sep 30 13:00 PST
+"test_performance" start time: Sep 30 13:32 PST
 Output:
 ----------------------------------------------------------
-        8 players: 0.0036 ms/tick
+        8 players: 0.0034 ms/tick
   [32mPASS[0m  budget: 100 players move within the per-tick budget
-        500 enemies: 0.2493 ms/tick
+        500 enemies: 0.2228 ms/tick
   [32mPASS[0m  budget: 500 entities tick within budget
-        200 enemies + firing: 0.0731 ms/tick
+        200 enemies + firing: 0.0942 ms/tick
   [32mPASS[0m  budget: 1000 projectiles resolve within budget
   [32mPASS[0m  budget: the projectile pool never allocates past its ceiling
-        hash query: 0.000197 ms, 20 candidates
+        hash query: 0.000234 ms, 20 candidates
   [32mPASS[0m  budget: spatial hash queries stay far cheaper than a linear scan
-        6000 ticks: 36.35 ms total (0.0061 ms/tick), wave 3, 29 entities
+        6000 ticks: 41.11 ms total (0.0069 ms/tick), wave 3, 29 entities
   [32mPASS[0m  budget: 2000 ticks of a full match stay in the frame budget
-        enemy sweep: 0.000180 ms
+        enemy sweep: 0.000261 ms
   [32mPASS[0m  budget: enemy removal does not allocate per tick
 
 7 passed, 0 failed, 7 total
 <end of output>
-Test time =   0.09 sec
+Test time =   0.10 sec
 ----------------------------------------------------------
 Test Passed.
-"test_performance" end time: Sep 30 13:00 PST
+"test_performance" end time: Sep 30 13:32 PST
 "test_performance" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: Sep 30 13:00 PST
+End testing: Sep 30 13:32 PST

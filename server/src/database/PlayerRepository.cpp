@@ -122,7 +122,7 @@ void PlayerRepository::applyRunAsync(uint32_t playerId, const std::string& name,
     PlayerRecord record;
     record.id = playerId;
     record.name = name;
-    record.lastSeen = utils::nowMillis() / 1000.0;
+    record.lastSeen = static_cast<double>(utils::nowMillis()) / 1000.0;
     std::string error;
     if (db_.findPlayerByName(name, record, error) && record.id == 0) {
         record.id = playerId;
@@ -136,7 +136,7 @@ void PlayerRepository::applyRunAsync(uint32_t playerId, const std::string& name,
     record.gamesPlayed += 1;
     // Credits mirror the offline economy: one per 100 points, plus one per kill.
     record.credits += run.score / 100 + run.kills;
-    record.lastSeen = utils::nowMillis() / 1000.0;
+    record.lastSeen = static_cast<double>(utils::nowMillis()) / 1000.0;
 
     saveAsync(record);
 }

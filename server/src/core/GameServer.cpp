@@ -22,21 +22,6 @@ constexpr double kIdleTimeoutSeconds = 45.0;
 /// How often the loop wakes for maintenance that is not tied to a tick.
 constexpr double kMaintenanceInterval = 1.0;
 
-std::vector<std::string> splitPath(const std::string& path) {
-    std::vector<std::string> parts;
-    std::size_t pos = 0;
-    while (pos < path.size()) {
-        const std::size_t slash = path.find('/', pos);
-        if (slash == std::string::npos) {
-            if (pos < path.size()) parts.push_back(path.substr(pos));
-            break;
-        }
-        if (slash > pos) parts.push_back(path.substr(pos, slash - pos));
-        pos = slash + 1;
-    }
-    return parts;
-}
-
 }  // namespace
 
 GameServer::GameServer(Executor executor, const Config& config)
@@ -90,7 +75,7 @@ bool GameServer::start(std::string& error) {
     server_ = std::make_unique<WebSocketServer>(executor_, config_, *this);
 
     matches_.setFinishedCallback([this](std::shared_ptr<game::Match> match) {
-        const double now = utils::nowMillis() / 1000.0;
+        const double now = static_cast<double>(utils::nowMillis()) / 1000.0;
         std::vector<game::RunResult> results;
         // The match already emitted its results through the state callback;
         // collect them here for persistence, off the hot path.
@@ -493,7 +478,10 @@ void GameServer::handlePing(Session& session, const InboundMessage& message) {
     sendJson(session, makePong(message.pingId, message.clientTick, tick_));
 }
 
-void GameServer::handleResync(Session& session, const InboundMessage& message) {
+void GameServer::handleResync(Session& session, const InboundMessage& /*message*/) {
+    // The `since` field is accepted for protocol compatibility. A full
+    // snapshot at the current tick is the correct answer either way: the
+    // server keeps no tick history to replay from.
     auto match = matches_.find(session.matchId);
     if (!match || match->phase() != game::MatchPhase::Running) return;
     // A full snapshot at the current tick is the cheapest correct answer to a
@@ -540,8 +528,6 @@ HttpResponse GameServer::onHttp(const HttpRequest& request) {
 
 HttpResponse GameServer::routeRest(const HttpRequest& request) {
     HttpResponse response;
-    const std::vector<std::string> parts = splitPath(request.path);
-
     if (request.method == "OPTIONS") {
         response.status = 204;
         return response;
@@ -573,7 +559,6 @@ HttpResponse GameServer::routeRest(const HttpRequest& request) {
         return response;
     }
 
-    (void)parts;
     response.status = 404;
     response.body = json{{"error", "not found"}}.dump();
     return response;
@@ -661,7 +646,6 @@ json GameServer::handleProfile(const HttpRequest& request) {
     const std::size_t query = request.target.find('?');
     if (query != std::string::npos) {
         const std::string tail = request.target.substr(query + 1);
-        const std::size_t eq = tail.find('=');
         if (tail.rfind("name=", 0) == 0) name = tail.substr(5);
     }
     if (name.empty()) {

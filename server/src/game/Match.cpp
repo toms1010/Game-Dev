@@ -18,7 +18,7 @@ Match::Match(uint32_t id, std::string mode, const core::Config& config)
                  // headroom for players and projectiles.
                  static_cast<std::size_t>(std::max(16, config.tick.max_entities / 2)),
                  3.0}),
-      createdAt_(utils::nowMillis() / 1000.0),
+      createdAt_(static_cast<double>(utils::nowMillis()) / 1000.0),
       startDeadline_(createdAt_ + config.match_start_delay),
       startDelay_(config.match_start_delay) {
     state_.setEventCallback([this](const std::string& kind, uint32_t id, double value) {
@@ -50,7 +50,7 @@ bool Match::readyToStart(double nowSeconds) const {
 void Match::start() {
     if (phase_ != MatchPhase::Waiting) return;
     phase_ = MatchPhase::Running;
-    startedAt_ = utils::nowMillis() / 1000.0;
+    startedAt_ = static_cast<double>(utils::nowMillis()) / 1000.0;
     NEON_INFO("match ", id_, " started with ", state_.playerCount(), " player(s), mode=", mode_);
 }
 
